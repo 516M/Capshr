@@ -1,0 +1,16 @@
+[package]
+name = "cap_scr"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+tray-icon = "0.21.2"
+scap = "0.0.8"
+egui = "0.33.0"
+eframe = "0.33.0"
+image = "0.25.8"
+#imageproc = "0.25.0"
+photon-rs = "0.3.3"
+#arboard = "3.6.1"
+clipboard-rs = "0.3.0"
+rdev = "0.5.3"
