@@ -1,17 +1,28 @@
-# CapScr | A screenshot utility | Rust
+# Capshr | A screenshot utility | Rust
 
-### Usage
+## Usage
 
-CapScr works by immediately capturing the whole screen and then allowing you to select the region that you want to capture/edit. 
+Capshr works by immediately capturing the whole screen and then allowing you to select the region that you want to save.
 
-If you run it normally, it will immediately grab the screen. However, you can run it in daemon mode, where it will essentially wait for you to press print screen before it captures the screen.
-
-There are some shortcuts that you can use to quickly utilize it, such as Ctrl+S to save and Ctrl+C (which you can edit in the application's settings).
+Use Ctrl+S to save your selection as an image, and Ctrl+C to copy the selection into the clipboard. If there is no selection, the whole screen is used.
 
 ### TODOs
 
-[] System tray icon (had a headache with this one)
-[] Argument that runs capscr as a daemon in the background
-[] Look at how older applications can immediately capture regions just by specifying width, height and coordinates (?)
-[] Gif/Video recording options
-[] Editing: Basic drawing tools/creating "pointer" lines/text writing/adding captions(whether at the top or bottom)
+* <u>README.md (this file)</u>:
+- [ ] Insert some demonstration (can be a gif; can be a video, etc..)
+- [ ] Insert some examples.
+- [ ] Add more sections
+
+* <u>Development:</u>
+- [ ] Clippy: Skim around and check for potential pitfalls/mistakes.
+
+* <u>Release:</u>
+- [ ] Argument that runs Capshr in daemon mode (also for X11) in the background -- Run in the background and listen for inputs. e.g. `capshr -d` to run in the background.
+- [ ] System tray icon (had a headache with this one)
+- [ ] Allow Capshr to capture region by specifying it via CLI -- e.g. `capshr -c -x 320 -y 240 -w 300 -h 300` ... etc
+- [ ] Gif/Video recording options. e.g. `capshr -c -g gif` (-c: capture, -g: gui that you can drag around to determine where you want to record on screen)
+- [ ] Editing: Basic drawing tools/creating "pointer" lines/text writing/adding captions(whether at the top or bottom)
+
+## License
+
+See the [LICENSE.md](LICENSE.md) file.
