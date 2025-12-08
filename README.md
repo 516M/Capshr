@@ -14,7 +14,8 @@ Use Ctrl+S to save your selection as an image, and Ctrl+C to copy the selection 
 - [ ] Add more sections
 
 * <u>Development:</u>
-- [ ] Clippy: Skim around and check for potential pitfalls/mistakes.
+- [x] Clippy: Skim around and check for potential pitfalls/mistakes.
+- [ ] Break down the app to smaller parts and files.
 
 * <u>Release:</u>
 - [ ] Argument that runs Capshr in daemon mode (also for X11) in the background -- Run in the background and listen for inputs. e.g. `capshr -d` to run in the background.

@@ -6,19 +6,14 @@ use std::path::PathBuf;
 
 use image::ImageBuffer;
 use arboard::{ImageData, Clipboard};
-//use clipboard_rs::{Clipboard, ClipboardContext, RustImageData};
 
 //use tray_icon::{TrayIconBuilder, TrayIcon, Icon};
 use image::RgbaImage;
 use xcap::Monitor;
 use eframe::{UserEvent, egui};
 use egui_file_dialog::{DialogState, FileDialog, FileDialogConfig};
-//use egui_file_dialog::*;
 use egui::{Color32, Pos2, Rect, StrokeKind, Key};
-//use egui::util::poll_promise::Promise;
 use chrono::prelude::*;
-//use rfd::FileDialog;
-//use rfd::AsyncFileDialog;
 use winit::{
 //    application::ApplicationHandler,
 //    window::Window,
@@ -27,7 +22,6 @@ use winit::{
 //    event::{ElementState, Event, KeyEvent, WindowEvent},
     event_loop::{ControlFlow, EventLoop}, //, ActiveEventLoop},
 };
-
 
 use x11rb::{
     connection::Connection,
@@ -172,12 +166,18 @@ impl App {
     //    let start = Instant::now();
         let monitors = Monitor::all().unwrap();
 
-        let primary_monitor = &monitors[0];
-        let screenshot = primary_monitor.capture_image().unwrap();
+        let monitor_bind = monitors.first();
+        let primary_monitor = match &monitor_bind {
+            Some(monitor) => monitor,
+            None      => {
+                println!("No monitors detected!");
+                std::process::exit(1);
+            }
+        };
         // TODO: Only print in Debug mode
         //println!("Capture took {:?} .", start.elapsed());
 
-        screenshot
+        primary_monitor.capture_image().unwrap()
     }
 
     pub fn get_screenshot_region(&self, p1: Pos2, p2: Pos2, viewport_size: egui::Vec2) -> ImageBuffer<image::Rgba<u8>, std::vec::Vec<u8>> {
@@ -195,21 +195,21 @@ impl App {
         let mut point_x = crop_min_x;
         let mut width: u32 = match crop_max_x > crop_min_x {
             true => {
-                (crop_max_x as i32 - crop_min_x as i32).abs() as u32
+                (crop_max_x as i32 - crop_min_x as i32).unsigned_abs()
             },
             false => {
                 point_x = crop_max_x;
-                (crop_min_x as i32 - crop_max_x as i32).abs() as u32
+                (crop_min_x as i32 - crop_max_x as i32).unsigned_abs()
             }
         };
         let mut point_y = crop_min_y;
         let mut height: u32 = match crop_max_y > crop_min_y {
             true => {
-                (crop_max_y as i32 - crop_min_y as i32).abs() as u32
+                (crop_max_y as i32 - crop_min_y as i32).unsigned_abs()
             },
             false => {
                 point_y = crop_max_y;
-                (crop_min_y as i32 - crop_max_y as i32).abs() as u32
+                (crop_min_y as i32 - crop_max_y as i32).unsigned_abs()
             }
         };
 
@@ -219,10 +219,8 @@ impl App {
             height = image_height as u32;
         }
 
-        let screenshot_region = image::imageops::crop_imm(&self.screenshot, point_x, point_y, width, height)
-            .to_image();
-
-        return screenshot_region;
+        image::imageops::crop_imm(&self.screenshot, point_x, point_y, width, height)
+            .to_image()
     }
 
     pub fn create_save_dialog() -> FileDialog {
@@ -259,11 +257,9 @@ impl App {
             //.add_save_extension("JPG files", "jpg");
 
         
-        let fd = FileDialog::with_config(config.clone())
+        FileDialog::with_config(config.clone())
             .id("file-dialog-a")
-            .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0]);
-
-        fd
+            .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0])
     }
 
     // TODO: Check if successfully copied to clipboard?
@@ -326,43 +322,49 @@ impl eframe::App for App {
         if let Ok(window_handle) = frame.window_handle() {
             let raw = window_handle.as_ref();
 
-            match raw {
-                // X11: handle fullscreen
-                RawWindowHandle::Xlib(h) => {
-                    let window: u32 = (h.window & 0xFFFF_FFFF) as u32;
-                    let (conn, screen_num) = x11rb::connect(None).unwrap();
-                    let screen = &conn.setup().roots[screen_num];
-                    let net_wm_state = 
-                        conn.intern_atom(false, b"_NET_WM_STATE").unwrap().reply().unwrap().atom;
-                    let net_wm_state_fullscreen = 
-                        conn.intern_atom(false, b"_NET_WM_STATE_FULLSCREEN").unwrap().reply().unwrap().atom;
-                    //let net_wm_bypass_compositor = 
-                    //    conn.intern_atom(false, b"_NET_WM_BYPASS_COMPOSITOR").unwrap().reply().unwrap().atom;
-                    let root = screen.root;
+            if let RawWindowHandle::Xlib(h) = raw {
+                let window: u32 = (h.window & 0xFFFF_FFFF) as u32;
+                let (conn, screen_num) = x11rb::connect(None).unwrap();
+                let screen_bind = &conn.setup().roots.get(screen_num);
+                let screen = match screen_bind {
+                    Some(screen) => screen,
+                    None => {
+                        println!("No screen found!");
+                        std::process::exit(1);
+                    }
+                };
 
-                    let event = ClientMessageEvent::new(
-                        32,                      // format = 32-bit
-                        window,                  // destination window
-                        net_wm_state,            // message type
-                        [
-                            1,                      // _NET_WM_STATE_ADD
-                            net_wm_state_fullscreen,
-                            1,
-                            0,
-                            0,
-                        ],
-                    );
 
-                    let _ = conn.send_event(
-                        false,
-                        root,
-                        EventMask::SUBSTRUCTURE_REDIRECT | EventMask::SUBSTRUCTURE_NOTIFY,
-                        event,
-                    );
-                    let _ = conn.flush();    
-                },
-                _ => {}
-                /*
+                let net_wm_state = 
+                    conn.intern_atom(false, b"_NET_WM_STATE").unwrap().reply().unwrap().atom;
+                let net_wm_state_fullscreen = 
+                    conn.intern_atom(false, b"_NET_WM_STATE_FULLSCREEN").unwrap().reply().unwrap().atom;
+                //let net_wm_bypass_compositor = 
+                //    conn.intern_atom(false, b"_NET_WM_BYPASS_COMPOSITOR").unwrap().reply().unwrap().atom;
+                let root = screen.root;
+
+                let event = ClientMessageEvent::new(
+                    32,                      // format = 32-bit
+                    window,                  // destination window
+                    net_wm_state,            // message type
+                    [
+                        1,                      // _NET_WM_STATE_ADD
+                        net_wm_state_fullscreen,
+                        1,
+                        0,
+                        0,
+                    ],
+                );
+
+                let _ = conn.send_event(
+                    false,
+                    root,
+                    EventMask::SUBSTRUCTURE_REDIRECT | EventMask::SUBSTRUCTURE_NOTIFY,
+                    event,
+                );
+                let _ = conn.flush();    
+
+                                /*
                 RawWindowHandle::Win32(h) => {
                     println!("Win32 handle:   {:?}", h.hwnd);
                 }
@@ -379,6 +381,7 @@ impl eframe::App for App {
                 */
             }
         }
+
 
         let scr_color = egui::ColorImage::from_rgba_unmultiplied(
             [self.screenshot.width() as usize, self.screenshot.height() as usize],
@@ -512,13 +515,11 @@ impl eframe::App for App {
                         }*/
                         //App::save_capture(ui, scr_region);
                     }
-                } else if self.drawn_rect {
-                    if ctx.input(|i| i.key_pressed(Key::Escape)) {
+                } else if self.drawn_rect && ctx.input(|i| i.key_pressed(Key::Escape)) {
                         self.drawn_rect = false;
                         self.selection_start = Pos2::ZERO;
                         self.selection_end = Pos2::ZERO;
                         self.selection = Rect::ZERO;
-                    } 
                 }
         });
    }
